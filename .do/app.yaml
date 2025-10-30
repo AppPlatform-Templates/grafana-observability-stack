@@ -38,6 +38,8 @@ services:
     instance_count: 1
     instance_size_slug: professional-xs
 
+    # Internal only - no public routes
+
   # Grafana - Visualization and dashboarding
   - name: grafana
     github:
