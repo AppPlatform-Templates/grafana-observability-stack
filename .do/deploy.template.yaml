@@ -2,6 +2,15 @@ spec:
   name: grafana-observability
   region: nyc
 
+  ingress:
+    rules:
+      - match:
+          path:
+            prefix: /
+        component:
+          name: grafana
+          preserve_path_prefix: true
+
   services:
     # Loki - Log aggregation system
     - name: loki
@@ -55,9 +64,6 @@ spec:
         period_seconds: 10
         timeout_seconds: 5
         failure_threshold: 3
-
-      routes:
-        - path: /
 
       envs:
         # Database configuration
