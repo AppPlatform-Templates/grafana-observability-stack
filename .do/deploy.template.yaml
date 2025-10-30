@@ -46,8 +46,6 @@ spec:
       instance_count: 1
       instance_size_slug: professional-xs
 
-      # Internal only - no public routes (routes key omitted)
-
     # Grafana - Visualization and dashboarding
     - name: grafana
       git:

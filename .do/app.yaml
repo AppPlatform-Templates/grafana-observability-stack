@@ -1,121 +1,120 @@
 # Example app.yaml for local testing
 # Replace placeholder values with actual values before deploying
 
-name: grafana-observability-test
-region: nyc
+spec:
+  name: grafana-observability-test
+  region: nyc
 
-ingress:
-  rules:
-    - match:
-        path:
-          prefix: /
-      component:
-        name: grafana
-        preserve_path_prefix: true
+  ingress:
+    rules:
+      - match:
+          path:
+            prefix: /
+        component:
+          name: grafana
+          preserve_path_prefix: true
 
-services:
-  # Loki - Log aggregation system
-  - name: loki
-    github:
-      repo: your-username/grafana-observability-stack
-      branch: main
-      deploy_on_push: true
-    dockerfile_path: loki/Dockerfile
-    source_dir: /
+  services:
+    # Loki - Log aggregation system
+    - name: loki
+      github:
+        repo: your-username/grafana-observability-stack
+        branch: main
+        deploy_on_push: true
+      dockerfile_path: loki/Dockerfile
+      source_dir: /
 
-    http_port: 3100
+      http_port: 3100
 
-    health_check:
-      http_path: /ready
-      initial_delay_seconds: 30
-      period_seconds: 10
-      timeout_seconds: 5
-      failure_threshold: 3
+      health_check:
+        http_path: /ready
+        initial_delay_seconds: 30
+        period_seconds: 10
+        timeout_seconds: 5
+        failure_threshold: 3
 
-    envs:
-      - key: SPACES_ENDPOINT
-        value: nyc3.digitaloceanspaces.com
-      - key: SPACES_BUCKET
-        value: your-loki-logs-bucket
-      - key: SPACES_ACCESS_KEY
-        value: your_spaces_access_key
-        type: SECRET
-      - key: SPACES_SECRET_KEY
-        value: your_spaces_secret_key
-        type: SECRET
+      envs:
+        - key: SPACES_ENDPOINT
+          value: nyc3.digitaloceanspaces.com
+        - key: SPACES_BUCKET
+          value: your-loki-logs-bucket
+        - key: SPACES_ACCESS_KEY
+          value: your_spaces_access_key
+          type: SECRET
+        - key: SPACES_SECRET_KEY
+          value: your_spaces_secret_key
+          type: SECRET
 
-    instance_count: 1
-    instance_size_slug: professional-xs
+      instance_count: 1
+      instance_size_slug: professional-xs
 
-    # Internal only - no public routes
+    # Grafana - Visualization and dashboarding
+    - name: grafana
+      github:
+        repo: your-username/grafana-observability-stack
+        branch: main
+        deploy_on_push: true
+      dockerfile_path: grafana/Dockerfile
+      source_dir: /
 
-  # Grafana - Visualization and dashboarding
-  - name: grafana
-    github:
-      repo: your-username/grafana-observability-stack
-      branch: main
-      deploy_on_push: true
-    dockerfile_path: grafana/Dockerfile
-    source_dir: /
+      http_port: 3000
 
-    http_port: 3000
+      health_check:
+        http_path: /api/health
+        initial_delay_seconds: 30
+        period_seconds: 10
+        timeout_seconds: 5
+        failure_threshold: 3
 
-    health_check:
-      http_path: /api/health
-      initial_delay_seconds: 30
-      period_seconds: 10
-      timeout_seconds: 5
-      failure_threshold: 3
+      envs:
+        # Database configuration
+        - key: GF_DATABASE_TYPE
+          value: postgres
+        - key: GF_DATABASE_URL
+          value: ${db.DATABASE_URL}
 
-    envs:
-      # Database configuration
-      - key: GF_DATABASE_TYPE
-        value: postgres
-      - key: GF_DATABASE_URL
-        value: ${db.DATABASE_URL}
+        # Session storage
+        - key: GF_SESSION_PROVIDER
+          value: postgres
+        - key: GF_SESSION_CONN_STR
+          value: ${db.DATABASE_URL}
 
-      # Session storage
-      - key: GF_SESSION_PROVIDER
-        value: postgres
-      - key: GF_SESSION_CONN_STR
-        value: ${db.DATABASE_URL}
+        # Server configuration
+        - key: GF_SERVER_ROOT_URL
+          value: ${APP_URL}
+        - key: GF_SERVER_DOMAIN
+          value: ${APP_DOMAIN}
 
-      # Server configuration
-      - key: GF_SERVER_ROOT_URL
-        value: ${APP_URL}
-      - key: GF_SERVER_DOMAIN
-        value: ${APP_DOMAIN}
+        # Security
+        - key: GF_SECURITY_ADMIN_USER
+          value: admin
+        - key: GF_SECURITY_ADMIN_PASSWORD
+          value: changeme123!
+          type: SECRET
+        - key: GF_SECURITY_SECRET_KEY
+          value: your_random_secret_key_here
+          type: SECRET
 
-      # Security
-      - key: GF_SECURITY_ADMIN_USER
-        value: admin
-      - key: GF_SECURITY_ADMIN_PASSWORD
-        value: changeme123!
-        type: SECRET
-      - key: GF_SECURITY_SECRET_KEY
-        value: your_random_secret_key_here
-        type: SECRET
+        # Authentication
+        - key: GF_AUTH_ANONYMOUS_ENABLED
+          value: "false"
+        - key: GF_USERS_ALLOW_SIGN_UP
+          value: "false"
 
-      # Authentication
-      - key: GF_AUTH_ANONYMOUS_ENABLED
-        value: "false"
-      - key: GF_USERS_ALLOW_SIGN_UP
-        value: "false"
+        # Paths
+        - key: GF_PATHS_PROVISIONING
+          value: /etc/grafana/provisioning
 
-      # Paths
-      - key: GF_PATHS_PROVISIONING
-        value: /etc/grafana/provisioning
+        # Plugins (optional)
+        - key: GF_INSTALL_PLUGINS
+          value: ""
 
-      # Plugins (optional)
-      - key: GF_INSTALL_PLUGINS
-        value: ""
+      instance_count: 1
+      instance_size_slug: professional-xs
 
-    instance_count: 1
-    instance_size_slug: professional-xs
-
-databases:
-  - name: db
-    engine: PG
-    version: "16"
-    production: false
-    cluster_name: grafana-test-db
+  databases:
+    - name: db
+      engine: PG
+      version: "16"
+      production: false
+      cluster_name: grafana-test-db
