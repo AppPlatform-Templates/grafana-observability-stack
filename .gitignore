@@ -1,0 +1,68 @@
+# Secrets and credentials
+*.env
+.env.local
+.env.*.local
+secrets/
+credentials/
+
+# Loki data directories (local development)
+/loki/data/
+/loki/index/
+/loki/index_cache/
+/loki/compactor/
+/loki/wal/
+
+# Grafana data (local development)
+/grafana/data/
+/grafana/logs/
+grafana.db
+
+# Docker
+docker-compose.override.yml
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~.nib
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Backup files
+*.bak
+*.backup
+
+# Test files (if any)
+test-data/
+*.test
+
+# Prometheus data (if added later)
+/prometheus/data/
+
+# Local configuration overrides
+*.local.yaml
+*.local.yml
+*-local.yaml
+*-local.yml

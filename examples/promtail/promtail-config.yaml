@@ -1,0 +1,121 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  # For external access (from outside App Platform)
+  - url: https://your-app-name.ondigitalocean.app/loki/api/v1/push
+
+  # For internal access (if Promtail runs in same App Platform app)
+  # - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # System logs
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: varlogs
+          host: ${HOSTNAME}
+          __path__: /var/log/*log
+
+  # Application logs (custom path)
+  - job_name: application
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: myapp
+          environment: production
+          __path__: /app/logs/*.log
+
+  # Docker container logs
+  - job_name: docker
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: docker
+          __path__: /var/lib/docker/containers/*/*.log
+    pipeline_stages:
+      - json:
+          expressions:
+            output: log
+            stream: stream
+            attrs:
+      - json:
+          expressions:
+            tag:
+          source: attrs
+      - regex:
+          expression: (?P<image_name>(?:[^|]*[^|]))
+          source: tag
+      - labels:
+          tag:
+          stream:
+          image_name:
+
+  # Nginx access logs
+  - job_name: nginx
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          log_type: access
+          __path__: /var/log/nginx/access.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<remote_addr>[\w\.]+) - (?P<remote_user>[^ ]*) \[(?P<time_local>.*)\] "(?P<method>[^ ]*) (?P<request>[^ ]*) (?P<protocol>[^ ]*)" (?P<status>[\d]+) (?P<body_bytes_sent>[\d]+) "(?P<http_referer>[^"]*)" "(?P<http_user_agent>[^"]*)"'
+      - labels:
+          method:
+          status:
+
+  # Nginx error logs
+  - job_name: nginx-error
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          log_type: error
+          __path__: /var/log/nginx/error.log
+
+  # JSON logs with parsing
+  - job_name: json-app
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: json-app
+          __path__: /app/logs/*.json
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            timestamp: timestamp
+            message: message
+            caller: caller
+      - labels:
+          level:
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+
+# Multi-line log handling (e.g., stack traces)
+# Uncomment and configure for your application
+# - job_name: multiline-app
+#   static_configs:
+#     - targets:
+#         - localhost
+#       labels:
+#         job: myapp
+#         __path__: /app/logs/app.log
+#   pipeline_stages:
+#     - multiline:
+#         firstline: '^\d{4}-\d{2}-\d{2}'
+#         max_wait_time: 3s

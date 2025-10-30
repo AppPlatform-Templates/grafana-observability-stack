@@ -1,0 +1,118 @@
+// Grafana Alloy configuration for sending logs to Loki
+
+// Loki write endpoint
+loki.write "default" {
+  endpoint {
+    url = "https://your-app-name.ondigitalocean.app/loki/api/v1/push"
+
+    // For internal access (if Alloy runs in same App Platform app):
+    // url = "http://loki:3100/loki/api/v1/push"
+
+    // Optional: Add authentication
+    // basic_auth {
+    //   username = "user"
+    //   password = "pass"
+    // }
+  }
+}
+
+// Scrape system logs
+loki.source.file "system_logs" {
+  targets = [
+    {
+      __path__ = "/var/log/*.log",
+      job      = "varlogs",
+      host     = env("HOSTNAME"),
+    },
+  ]
+
+  forward_to = [loki.write.default.receiver]
+}
+
+// Scrape application logs (JSON format)
+loki.source.file "app_logs" {
+  targets = [
+    {
+      __path__     = "/app/logs/*.json",
+      job          = "myapp",
+      environment  = "production",
+    },
+  ]
+
+  // Parse JSON logs
+  stage.json {
+    expressions = {
+      level   = "level",
+      message = "message",
+    }
+  }
+
+  // Extract level as label
+  stage.labels {
+    values = {
+      level = "",
+    }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+// Scrape Docker container logs
+loki.source.docker "containers" {
+  host     = "unix:///var/run/docker.sock"
+  targets  = []
+
+  labels = {
+    job = "docker",
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+// Scrape Kubernetes pods (if applicable)
+// discovery.kubernetes "pods" {
+//   role = "pod"
+// }
+//
+// loki.source.kubernetes "pods" {
+//   targets    = discovery.kubernetes.pods.targets
+//   forward_to = [loki.write.default.receiver]
+// }
+
+// Sample high-volume logs
+loki.process "sampling" {
+  // Sample 10% of logs from high-volume source
+  stage.sampling {
+    rate = 0.1
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+// Drop debug logs in production
+loki.process "filter" {
+  stage.match {
+    selector = "{job=\"myapp\"}"
+
+    stage.drop {
+      expression = ".*debug.*"
+    }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+// Expose metrics for monitoring Alloy itself
+prometheus.exporter.self "default" { }
+
+prometheus.scrape "default" {
+  targets    = prometheus.exporter.self.default.targets
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+// Optional: Send Alloy metrics to Prometheus
+// prometheus.remote_write "default" {
+//   endpoint {
+//     url = "http://prometheus:9090/api/v1/write"
+//   }
+// }

@@ -1,0 +1,48 @@
+version: '3.8'
+
+# Example: Using Docker Loki logging driver to send logs directly to Loki
+
+services:
+  # Your application
+  myapp:
+    image: your-app:latest
+    logging:
+      driver: loki
+      options:
+        loki-url: "https://your-app-name.ondigitalocean.app/loki/api/v1/push"
+        # Or for internal access: http://loki:3100/loki/api/v1/push
+
+        loki-batch-size: "400"
+        loki-retries: "2"
+        loki-max-backoff: "1s"
+        loki-timeout: "1s"
+
+        # Add labels
+        loki-external-labels: "job=myapp,environment=production,container={{.Name}}"
+
+        # Optional: Keep logs in JSON format
+        # loki-format: "json"
+
+    environment:
+      - APP_ENV=production
+
+  # Another service
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    logging:
+      driver: loki
+      options:
+        loki-url: "https://your-app-name.ondigitalocean.app/loki/api/v1/push"
+        loki-external-labels: "job=nginx,service={{.Name}}"
+
+  # Service with JSON logging
+  api:
+    image: my-api:latest
+    logging:
+      driver: loki
+      options:
+        loki-url: "https://your-app-name.ondigitalocean.app/loki/api/v1/push"
+        loki-external-labels: "job=api,environment=production"
+        loki-format: "json"  # Preserve JSON format

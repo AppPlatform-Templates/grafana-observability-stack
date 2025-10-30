@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      # Promtail configuration
+      - ./promtail-config.yaml:/etc/promtail/config.yaml:ro
+
+      # System logs
+      - /var/log:/var/log:ro
+
+      # Docker container logs (if needed)
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+
+      # Application logs (customize this path)
+      - /app/logs:/app/logs:ro
+
+    command: -config.file=/etc/promtail/config.yaml
+
+    restart: unless-stopped
+
+    # Optional: Expose metrics for monitoring Promtail itself
+    ports:
+      - "9080:9080"
+
+    # Set environment variables (optional)
+    environment:
+      - HOSTNAME=${HOSTNAME:-localhost}
+
+    # Logging driver (optional: log Promtail's own logs to stdout)
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
